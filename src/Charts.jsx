@@ -183,7 +183,7 @@ function Charts() {
           rowSpan: 2,
           // Specify the Axis for the Zoom Band Chart to follow.
           // The Zoom Band Chart will imitate all Series present in that Axis.
-          axis: xAxisList,
+          axis: chart.getDefaultAxisX(),
         });
         zoomBandChart.setPadding(20);
         zoomBandChart.setBackgroundStrokeStyle(
@@ -276,12 +276,12 @@ function Charts() {
       i++;
     });
     setLoading(false);
-    // const l = xAxisList.length;
-    // xAxisList[0].onScaleChange((start, end) => {
-    //   for (let i = 1; i < l; i++) {
-    //     xAxisList[i].setInterval(start, end, false, true);
-    //   }
-    // });
+    const l = xAxisList.length;
+    xAxisList[0].onScaleChange((start, end) => {
+      for (let i = 1; i < l; i++) {
+        xAxisList[i].setInterval(start, end, false, true);
+      }
+    });
   }, [signalsData, interval]);
 
   useEffect(() => {
