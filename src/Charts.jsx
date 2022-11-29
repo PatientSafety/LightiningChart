@@ -63,10 +63,11 @@ function Charts() {
       const data = {};
       studySignals.forEach((signal) => {
         fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/signalsegments?minimumSampleRate=10&signalId=${signal.SignalId}&startTime=${interval.start}&endTime=${interval.end}`)
-          .then((response) => response.json())
+          .then((response) => {
+            return response.json();
+          })
           .then((result) => {
             data[signal.SignalId] = { data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []), type: signal.Type };
-
             if (Object.keys(data).length === l) setSignalsData(data);
           });
       });
@@ -173,8 +174,14 @@ function Charts() {
         xAxis: xAxisList[i],
         yAxis: axisY,
       });
-      axisY.setInterval(0, 300);
-      if (i === Object.keys(signalsData).length - 1) {
+
+      if (i === 0) {
+        // axisY.onScaleChange((start, end) => {
+        //   for (let i = 1; i < l; i++) {
+        //     console.log(start, end);
+        //   }
+        // });
+        axisY.setInterval(-10, 200);
         const zoomBandChart = dashboard.createZoomBandChart({
           columnIndex: 0,
           theme: Themes.glacier,
@@ -195,19 +202,19 @@ function Charts() {
         zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 300);
       }
       splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: i * 1000, y: point })));
-      axisY.setInterval(splineSeries1.getYMin() - 10, splineSeries1.getYMax() + 10, true, true);
+      axisY.setInterval(splineSeries1.getYMin() - 30, splineSeries1.getYMax() + 60, true, true);
 
       if (events[signalId] && events[signalId].length) {
         const rectangles = chart.addRectangleSeries();
 
         let y = 0;
 
-        const figureHeight = 20;
+        const figureHeight = 25;
         const figureThickness = 20;
         const figureGap = figureThickness * 0.5;
         const fitAxes = () => {
           // Custom fitting for some additional margins
-          axisY.setInterval(y, figureHeight * 0.5);
+          //axisY.setInterval(y, figureHeight * 0.5);
         };
         const t = i;
         let customYRange = figureHeight + figureGap * 1.6;
@@ -228,16 +235,17 @@ function Charts() {
               .setDraggingMode(UIDraggingModes.notDraggable)
               .setPosition({
                 x: (min + max) / 2,
-                y: rectDimensions.y + 5,
+                y: rectDimensions.y + 15,
               })
               .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine));
 
             spanText.addElement(
-              UIElementBuilders.TextBox.addStyler((textBox) =>
+              UIElementBuilders.PointableTextBox.addStyler((textBox) =>
                 textBox
                   .setTextFont((fontSettings) => fontSettings.setSize(13))
                   .setText(events[signalId][i].type)
                   .setTextFillStyle(new SolidFill().setColor(ColorRGBA(25, 25, 25)))
+                  .setDirection(lcjs.UIDirections.Left)
               )
             );
 
@@ -258,9 +266,9 @@ function Charts() {
         };
         const categories = events[signalId].map((t) => addCategory(t.y));
         const colorPalette = ColorPalettes.flatUI(categories.length);
-        const fillStyles = categories.map((_, i) => new SolidFill({ color: colorPalette(i) }));
+        const fillStyles = categories.map((_, i) => new SolidFill({ color: ColorRGBA(0, 0, 0, 0) }));
         const strokeStyle = new SolidLine({
-          fillStyle: new SolidFill({ color: ColorRGBA(0, 0, 0) }),
+          fillStyle: new SolidFill({ color: ColorRGBA(0, 0, 0, 0) }),
           thickness: 1,
         });
 
@@ -277,11 +285,14 @@ function Charts() {
     });
     setLoading(false);
     const l = xAxisList.length;
+
     xAxisList[0].onScaleChange((start, end) => {
       for (let i = 1; i < l; i++) {
         xAxisList[i].setInterval(start, end, false, true);
       }
     });
+    xAxisList[0].setInterval(-1900, 311000);
+    setSignalsData(null);
   }, [signalsData, interval]);
 
   useEffect(() => {
