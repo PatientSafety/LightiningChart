@@ -133,7 +133,8 @@ function Charts() {
         })
         .setTitle(signalsData[signalId].type)
         .setFittingRectangleStrokeStyle(fittingRectangleStrokeStyle)
-        .setZoomingRectangleFillStyle(zoomingRectangleFillStyle);
+        .setZoomingRectangleFillStyle(zoomingRectangleFillStyle)
+        .setMouseInteractionWheelZoom(false);
 
       xAxisList[i] = chart
         .getDefaultAxisX()
@@ -157,6 +158,7 @@ function Charts() {
         .setStrokeStyle(axisYStrokeStyles[0])
         .setOverlayStyle(axisYStylesHighlight[0])
         .setNibOverlayStyle(axisYStylesHighlight[0])
+
         .setInterval(0, 100)
         .setTickStrategy(
           // Use Numeric TickStrategy as base.
@@ -176,11 +178,6 @@ function Charts() {
       });
 
       if (i === 0) {
-        // axisY.onScaleChange((start, end) => {
-        //   for (let i = 1; i < l; i++) {
-        //     console.log(start, end);
-        //   }
-        // });
         axisY.setInterval(-10, 200);
         const zoomBandChart = dashboard.createZoomBandChart({
           columnIndex: 0,
@@ -199,18 +196,22 @@ function Charts() {
           })
         );
         zoomBandChart.band.setValueStart(0);
-        zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 300);
+        zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 30);
       }
-      splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: i * 1000, y: point })));
-      axisY.setInterval(splineSeries1.getYMin() - 30, splineSeries1.getYMax() + 60, true, true);
+      splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: i * 100, y: point })));
+      const min = splineSeries1.getYMin() - 30;
+      const max = splineSeries1.getYMax() + 50;
+      const diff = max - min;
+      axisY.setInterval(min, max, true, true);
 
       if (events[signalId] && events[signalId].length) {
         const rectangles = chart.addRectangleSeries();
+        const pols = chart.addPolygonSeries();
 
         let y = 0;
 
-        const figureHeight = 25;
-        const figureThickness = 20;
+        const figureHeight = 15;
+        const figureThickness = 5;
         const figureGap = figureThickness * 0.5;
         const fitAxes = () => {
           // Custom fitting for some additional margins
@@ -218,13 +219,12 @@ function Charts() {
         };
         const t = i;
         let customYRange = figureHeight + figureGap * 1.6;
-        const addCategory = (category) => {
-          const categoryY = y;
+        const addCategory = (y) => {
           const addSpan = (i, min, max, index) => {
             // Add rect
             const rectDimensions = {
               x: min,
-              y: category - figureHeight,
+              y: y - figureHeight,
               width: max - min,
               height: figureHeight,
             };
@@ -237,26 +237,31 @@ function Charts() {
                 x: (min + max) / 2,
                 y: rectDimensions.y + 15,
               })
+
               .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine));
 
             spanText.addElement(
-              UIElementBuilders.PointableTextBox.addStyler((textBox) =>
+              UIElementBuilders.TextBox.addStyler((textBox) =>
                 textBox
-                  .setTextFont((fontSettings) => fontSettings.setSize(13))
+                  .setTextFont((fontSettings) => fontSettings.setSize(15))
                   .setText(events[signalId][i].type)
-                  .setTextFillStyle(new SolidFill().setColor(ColorRGBA(25, 25, 25)))
-                  .setDirection(lcjs.UIDirections.Left)
+                  .setTextFillStyle(new SolidFill().setColor(ColorRGBA(255, 255, 255)))
               )
             );
 
             fitAxes();
-            // Return figure
-            return rectangles.add(rectDimensions);
+            return pols.add([
+              { x: min, y: y - figureHeight },
+              { x: max, y: y - figureHeight },
+              { x: max, y: y + figureHeight },
+              { x: min, y: y + figureHeight },
+              { x: min - 300, y: y },
+            ]);
           };
 
           // Add custom tick for category
 
-          y -= figureHeight * 1.5;
+          //y -= figureHeight * 1.5;
 
           fitAxes();
           // Return interface for category.
@@ -266,7 +271,7 @@ function Charts() {
         };
         const categories = events[signalId].map((t) => addCategory(t.y));
         const colorPalette = ColorPalettes.flatUI(categories.length);
-        const fillStyles = categories.map((_, i) => new SolidFill({ color: ColorRGBA(0, 0, 0, 0) }));
+        const fillStyles = categories.map((_, i) => new SolidFill({ color: ColorRGBA(0, 0, 0, 150) }));
         const strokeStyle = new SolidLine({
           fillStyle: new SolidFill({ color: ColorRGBA(0, 0, 0, 0) }),
           thickness: 1,
@@ -275,8 +280,8 @@ function Charts() {
         let index = 0;
         //const start = props.data.data_pulse[0] ? (props.data.data_pulse[0].x.getTime() - dateOriginTime) / 1000 : 0;
         events[signalId].forEach((event, i) => {
-          const start = new Date(event.start).getTime() - dateOriginTime;
-          const end = new Date(event.end).getTime() - dateOriginTime;
+          const start = (new Date(event.start).getTime() - dateOriginTime) / 1;
+          const end = (new Date(event.end).getTime() - dateOriginTime) / 1;
           categories[i].addSpan(i, start, end, index).setFillStyle(fillStyles[i]).setStrokeStyle(strokeStyle);
         });
       }
@@ -291,8 +296,8 @@ function Charts() {
         xAxisList[i].setInterval(start, end, false, true);
       }
     });
-    xAxisList[0].setInterval(-1900, 311000);
-    setSignalsData(null);
+    xAxisList[0].setInterval(0, 300000);
+    //setSignalsData(null);
   }, [signalsData, interval]);
 
   useEffect(() => {
@@ -303,10 +308,14 @@ function Charts() {
   useEffect(() => {
     if (studyData && studySignals.length) {
       if (interval.start) return;
-      const newInterval = { start: studySignals[0].StartTime, end: studySignals[0].EndTime };
-      setInterval(newInterval);
-      loadSignalsData(newInterval);
-      loadEvents(newInterval);
+      fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/sleepstudy?sleepstudyid=${studyId}`)
+        .then((response) => response.json())
+        .then((result) => {
+          const newInterval = { start: result.StartTime, end: result.EndTime };
+          setInterval(newInterval);
+          loadSignalsData(newInterval);
+          loadEvents(newInterval);
+        });
     }
   }, [studyData, studySignals, loadSignalsData, loadEvents, interval.start]);
 
