@@ -11,7 +11,7 @@ const {
   emptyLine,
   emptyFill,
   AxisTickStrategies,
-  LegendBoxBuilders,
+  UIVisibilityModes,
   UIOrigins,
   UIElementBuilders,
   UILayoutBuilders,
@@ -53,7 +53,7 @@ function Charts() {
   const loadStudySignals = () => {
     fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/sleepstudysignals?sleepstudyid=${studyId}`)
       .then((response) => response.json())
-      .then((result) => setStudySignals(result));
+      .then((result) => setStudySignals(result.slice(0, 6)));
   };
 
   const loadSignalsData = useCallback(
@@ -67,7 +67,7 @@ function Charts() {
             return response.json();
           })
           .then((result) => {
-            data[signal.SignalId] = { data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []), type: signal.Type };
+            data[signal.SignalId] = { data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []), type: signal.Type + " " + signal.Specification };
             if (Object.keys(data).length === l) setSignalsData(data);
           });
       });
@@ -114,8 +114,10 @@ function Charts() {
       numberOfColumns: 1,
       container: "chartContainer",
       numberOfRows: 3 * chartNumber + 5,
-      height: chartNumber * 300 + 300,
+      height: 1100,
+      margin: { top: 50 },
     });
+    dashboard.setSplitterStyle(emptyLine);
     const xAxisList = [];
     const chartList = [];
     let i = 0;
@@ -125,40 +127,66 @@ function Charts() {
           columnIndex: 0,
           columnSpan: 1,
           rowIndex: i * 3,
-          rowSpan: 3,
+          rowSpan: 4 + (i === chartNumber - 1 ? 1 : 0),
           theme: Themes.lightNew,
+          defaultAxisX: {
+            opposite: i === 0,
+          },
         })
         .setPadding({
           right: 50,
+          left: 10,
+          top: 30,
+          bottom: 20,
+          //bottom: i === 0 ? 0 : -30,
         })
-        .setTitle(signalsData[signalId].type)
+
+        .setTitle("")
+        .setTitleMarginTop(0)
         .setFittingRectangleStrokeStyle(fittingRectangleStrokeStyle)
         .setZoomingRectangleFillStyle(zoomingRectangleFillStyle)
         .setMouseInteractionWheelZoom(false);
 
-      xAxisList[i] = chart
-        .getDefaultAxisX()
-        .setOverlayStyle(axisXStyleHighlight)
-        .setNibOverlayStyle(axisXStyleHighlight)
-        // Set the X Axis to use DateTime TickStrategy
-        .setScrollStrategy(undefined)
-        .setTickStrategy(
-          // Use DateTime TickStrategy for this Axis
-          AxisTickStrategies.DateTime,
-          // Modify the DateOrigin of the TickStrategy
-          (tickStrategy) => tickStrategy.setDateOrigin(dateOrigin)
-        )
-        .setInterval(0, 150)
-        // Set view to 1 minute.
-        .setAnimationScroll(false);
+      if (i === 0 || i === chartNumber - 1) {
+        xAxisList[i] = chart
+          .getDefaultAxisX()
+
+          .setOverlayStyle(axisXStyleHighlight)
+          .setNibOverlayStyle(axisXStyleHighlight)
+          // Set the X Axis to use DateTime TickStrategy
+          .setScrollStrategy(undefined)
+          .setTickStrategy(
+            // Use DateTime TickStrategy for this Axis
+            AxisTickStrategies.DateTime,
+            // Modify the DateOrigin of the TickStrategy
+            (tickStrategy) => tickStrategy.setDateOrigin(dateOrigin)
+          );
+      } else {
+        xAxisList[i] = chart
+          .getDefaultAxisX()
+
+          .setOverlayStyle(axisXStyleHighlight)
+          .setNibOverlayStyle(axisXStyleHighlight)
+          // Set the X Axis to use DateTime TickStrategy
+          .setScrollStrategy(undefined)
+          .setTickStrategy(
+            // Use DateTime TickStrategy for this Axis
+            AxisTickStrategies.Empty
+            // Modify the DateOrigin of the TickStrategy
+          )
+          .setInterval(0, 150)
+          // Set view to 1 minute.
+          .setAnimationScroll(false);
+      }
+      //chart.setTickMarkerYVisibility(UIVisibilityModes.never);
 
       // Style the default Y Axis.
       const axisY = chart
         .getDefaultAxisY()
         .setStrokeStyle(axisYStrokeStyles[0])
+        .setTitle(signalsData[signalId].type)
         .setOverlayStyle(axisYStylesHighlight[0])
         .setNibOverlayStyle(axisYStylesHighlight[0])
-
         .setInterval(0, 100)
         .setTickStrategy(
           // Use Numeric TickStrategy as base.
@@ -184,7 +212,7 @@ function Charts() {
           theme: Themes.glacier,
           columnSpan: 1,
           rowIndex: Object.keys(signalsData).length * 3,
-          rowSpan: 2,
+          rowSpan: 4,
           // Specify the Axis for the Zoom Band Chart to follow.
           // The Zoom Band Chart will imitate all Series present in that Axis.
           axis: chart.getDefaultAxisX(),
@@ -196,7 +224,7 @@ function Charts() {
           })
         );
         zoomBandChart.band.setValueStart(0);
-        zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 30);
+        zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 10);
       }
       splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: i * 100, y: point })));
       const min = splineSeries1.getYMin() - 30;
@@ -326,7 +354,7 @@ function Charts() {
   return (
     <>
       {loading && <img style={{ margin: "100px auto", display: "block" }} id="loading-image" src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Loading_2.gif?20170503175831" alt="Loading..." />}
-      <div style={{ minHeight: "600px" }} id="chartContainer"></div>
+      <div style={{ minHeight: "600px", marginTop: "30px" }} id="chartContainer"></div>
     </>
   );
 }
