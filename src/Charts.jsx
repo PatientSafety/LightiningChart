@@ -16,6 +16,7 @@ const {
   UIElementBuilders,
   UILayoutBuilders,
   AxisScrollStrategies,
+  FontSettings,
   UIDraggingModes,
   Themes,
 } = lcjs;
@@ -133,9 +134,10 @@ function Charts() {
             opposite: i === 0,
           },
         })
+        .setTitleFont((font) => font.setSize(10))
         .setPadding({
           right: 50,
-          left: 10,
+          left: 0,
           top: 30,
           bottom: 20,
           //bottom: i === 0 ? 0 : -30,
@@ -152,6 +154,7 @@ function Charts() {
           .getDefaultAxisX()
 
           .setOverlayStyle(axisXStyleHighlight)
+          .setMouseInteractions(false)
           .setNibOverlayStyle(axisXStyleHighlight)
           // Set the X Axis to use DateTime TickStrategy
           .setScrollStrategy(undefined)
@@ -184,10 +187,18 @@ function Charts() {
       const axisY = chart
         .getDefaultAxisY()
         .setStrokeStyle(axisYStrokeStyles[0])
-        .setTitle(signalsData[signalId].type)
+        .setTitle(signalsData[signalId].type.slice(0, 20))
         .setOverlayStyle(axisYStylesHighlight[0])
         .setNibOverlayStyle(axisYStylesHighlight[0])
         .setInterval(0, 100)
+        .setTitleFont(
+          new FontSettings({
+            size: 11,
+            family: "Arial, Helvetica, sans-serif",
+            weight: "bold",
+            style: "italic",
+          })
+        )
         .setTickStrategy(
           // Use Numeric TickStrategy as base.
           AxisTickStrategies.Numeric,
@@ -199,6 +210,10 @@ function Charts() {
           // Modify Minor Tick Style by using a mutator.
         )
         .setScrollStrategy(AxisScrollStrategies.regressive);
+      const customTick = axisY
+        .addCustomTick()
+        .setTickLength(70)
+        .setTextFormatter((position, customTick) => "");
       // Modify the TickStrategy to remove gridLines from this Y Axis.
       const splineSeries1 = chart.addLineSeries({
         xAxis: xAxisList[i],
@@ -218,11 +233,18 @@ function Charts() {
           axis: chart.getDefaultAxisX(),
         });
         zoomBandChart.setPadding(20);
+        zoomBandChart.band.setStrokeStyle(
+          new SolidLine({
+            thickness: 2,
+            fillStyle: new SolidFill({ color: ColorRGBA(0, 255, 0) }),
+          })
+        );
         zoomBandChart.setBackgroundStrokeStyle(
           new SolidLine({
             color: ColorRGBA(255, 0, 0),
           })
         );
+        zoomBandChart.band.setHighlighted(true);
         zoomBandChart.band.setValueStart(0);
         zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 10);
       }
@@ -354,7 +376,7 @@ function Charts() {
   return (
     <>
       {loading && <img style={{ margin: "100px auto", display: "block" }} id="loading-image" src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Loading_2.gif?20170503175831" alt="Loading..." />}
-      <div style={{ minHeight: "600px", marginTop: "30px" }} id="chartContainer"></div>
+      <div style={{ minHeight: "600px", marginTop: "10px" }} id="chartContainer"></div>
     </>
   );
 }
