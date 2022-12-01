@@ -273,10 +273,10 @@ function Charts() {
       //   .setTickLength(30)
       //   .setTextFormatter((position, customTick) => new Date(position + dateOrigin.getTime()).toUTCString());
 
-      // const customTick = axisY
-      //   .addCustomTick()
-      //   .setTickLength(70)
-      //   .setTextFormatter((position, customTick) => "");
+      const customTick = axisY
+        .addCustomTick()
+        .setTickLength(60)
+        .setTextFormatter((position, customTick) => "");
       // Modify the TickStrategy to remove gridLines from this Y Axis.
       const splineSeries1 = chart
         .addLineSeries({
