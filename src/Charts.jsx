@@ -129,7 +129,7 @@ function Charts() {
       theme: Themes.lightNew,
       numberOfColumns: 1,
       container: "chartContainer",
-      numberOfRows: 3 * chartNumber + 6,
+      numberOfRows: 4 * chartNumber + 4,
       height: 1000,
       margin: { top: 50 },
     });
@@ -167,8 +167,8 @@ function Charts() {
         .createChartXY({
           columnIndex: 0,
           columnSpan: 1,
-          rowIndex: index * 3 + 1,
-          rowSpan: 4 + (index === chartNumber - 1 ? 1 : 0),
+          rowIndex: index * 4 + 1,
+          rowSpan: 4,
           theme: Themes.lightNew,
           defaultAxisX: {
             opposite: index === 0,
@@ -179,7 +179,6 @@ function Charts() {
           right: 50,
           left: 0,
           top: index < 2 ? 20 : 0,
-          bottom: 50,
           //bottom: i === 0 ? 0 : -30,
         })
 
@@ -299,7 +298,7 @@ function Charts() {
             columnIndex: 0,
             theme: Themes.glacier,
             columnSpan: 1,
-            rowIndex: signalsData.length * 3 + 3,
+            rowIndex: signalsData.length * 4 + 1,
             rowSpan: 2,
             // Specify the Axis for the Zoom Band Chart to follow.
             // The Zoom Band Chart will imitate all Series present in that Axis.
