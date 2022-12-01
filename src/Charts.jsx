@@ -40,10 +40,10 @@ const eventY = {
   Recovery: 80,
   Desaturation: 60,
   Reciprocation: 100,
-  OximetryReciprocation: 150,
+  OximetryReciprocation: 120,
   OximetryCycling: 30,
-  CandidateEvent: 120,
-  Tachycardia: 130,
+  CandidateEvent: 90,
+  Tachycardia: 110,
 };
 
 function Charts() {
@@ -64,26 +64,27 @@ function Charts() {
   const loadStudySignals = () => {
     fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/sleepstudysignals?sleepstudyid=${studyId}`)
       .then((response) => response.json())
-      .then((result) => setStudySignals(result.slice(0, 6)));
+      .then((result) => setStudySignals([result[5], result[0], result[6], result[1], result[8]]));
   };
 
   const loadSignalsData = useCallback(
     (interval) => {
       if (!studySignals.length) return;
       const l = studySignals.length;
-      const data = {};
-      studySignals.forEach((signal) => {
-        fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/signalsegments?minimumSampleRate=10&signalId=${signal.SignalId}&startTime=${interval.start}&endTime=${interval.end}`)
+      const data = [];
+      studySignals.forEach((signal, i) => {
+        fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/signalassinglesegment?sampleRate=10&signalId=${signal.SignalId}&startTime=${interval.start}&endTime=${interval.end}`)
           .then((response) => {
             return response.json();
           })
           .then((result) => {
-            data[signal.SignalId] = {
-              data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []),
+            data[i] = {
+              signalId: signal.SignalId,
+              data: result.Points,
               type: signal.Type + " " + signal.Specification,
-              rate: result[0].SampleRate,
+              rate: result.SampleRate,
             };
-            if (Object.keys(data).length === l) setSignalsData(data);
+            if (data.length === l) setSignalsData(data);
           });
       });
     },
@@ -120,22 +121,22 @@ function Charts() {
 
   const drawCharts = useCallback(() => {
     if (!interval || !signalsData) return;
-
+    console.log(signalsData);
     const dateOrigin = new Date(interval.start);
     const dateOriginTime = dateOrigin.getTime();
-    const chartNumber = Object.keys(signalsData).length;
+    const chartNumber = signalsData.length;
     const dashboard = lightningChart().Dashboard({
       theme: Themes.lightNew,
       numberOfColumns: 1,
       container: "chartContainer",
-      numberOfRows: 3 * chartNumber + 8,
-      height: 1100,
+      numberOfRows: 3 * chartNumber + 6,
+      height: 1000,
       margin: { top: 50 },
     });
     dashboard.setSplitterStyle(emptyLine);
     const xAxisList = [];
     const chartList = [];
-    let i = 0;
+    let index = 0;
     const column = dashboard
       .createUIPanel({
         columnIndex: 0,
@@ -160,23 +161,24 @@ function Charts() {
         )
     );
     column.addGap();
-    Object.keys(signalsData).forEach((signalId) => {
+    signalsData.forEach((signalData) => {
+      const signalId = signalData.signalId;
       const chart = dashboard
         .createChartXY({
           columnIndex: 0,
           columnSpan: 1,
-          rowIndex: i * 3 + 1,
-          rowSpan: 4 + (i === chartNumber - 1 ? 1 : 0),
+          rowIndex: index * 3 + 1,
+          rowSpan: 4 + (index === chartNumber - 1 ? 1 : 0),
           theme: Themes.lightNew,
           defaultAxisX: {
-            opposite: i === 0,
+            opposite: index === 0,
           },
         })
         .setTitleFont((font) => font.setSize(10))
         .setPadding({
           right: 50,
           left: 0,
-          top: i === 0 ? 20 : 0,
+          top: index === 0 ? 20 : 0,
           bottom: 50,
           //bottom: i === 0 ? 0 : -30,
         })
@@ -187,8 +189,8 @@ function Charts() {
         .setZoomingRectangleFillStyle(zoomingRectangleFillStyle)
         .setMouseInteractionWheelZoom(false);
 
-      if (i === 0 || i === chartNumber - 1) {
-        xAxisList[i] = chart
+      if (index === 0 || index === chartNumber - 1) {
+        xAxisList[index] = chart
           .getDefaultAxisX()
 
           .setOverlayStyle(axisXStyleHighlight)
@@ -215,7 +217,7 @@ function Charts() {
               })
           );
       } else {
-        xAxisList[i] = chart
+        xAxisList[index] = chart
           .getDefaultAxisX()
 
           .setOverlayStyle(axisXStyleHighlight)
@@ -237,7 +239,7 @@ function Charts() {
       const axisY = chart
         .getDefaultAxisY()
         .setStrokeStyle(axisYStrokeStyles[0])
-        .setTitle(signalsData[signalId].type.slice(0, 20))
+        .setTitle(signalData.type.slice(0, 20))
         .setOverlayStyle(axisYStylesHighlight[0])
         .setNibOverlayStyle(axisYStylesHighlight[0])
         .setInterval(0, 100)
@@ -260,7 +262,7 @@ function Charts() {
           // Modify Minor Tick Style by using a mutator.
         )
         .setScrollStrategy(AxisScrollStrategies.regressive);
-      if (i === 0) {
+      if (index === 0) {
         const firstRow = column.addElement(UILayoutBuilders.Row);
         firstRow.addGap();
       }
@@ -270,18 +272,18 @@ function Charts() {
         .setTextFormatter((position, customTick) => "");
       // Modify the TickStrategy to remove gridLines from this Y Axis.
       const splineSeries1 = chart.addLineSeries({
-        xAxis: xAxisList[i],
+        xAxis: xAxisList[index],
         yAxis: axisY,
       });
 
-      if (i === 0) {
+      if (index === 0) {
         axisY.setInterval(-10, 200);
         const zoomBandChart = dashboard
           .createZoomBandChart({
             columnIndex: 0,
             theme: Themes.glacier,
             columnSpan: 1,
-            rowIndex: Object.keys(signalsData).length * 3 + 3,
+            rowIndex: signalsData.length * 3 + 3,
             rowSpan: 2,
             // Specify the Axis for the Zoom Band Chart to follow.
             // The Zoom Band Chart will imitate all Series present in that Axis.
@@ -304,9 +306,9 @@ function Charts() {
         );
         zoomBandChart.band.setHighlighted(true);
         zoomBandChart.band.setValueStart(0);
-        zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 10);
+        zoomBandChart.band.setValueEnd(signalData.data.length * 10);
       }
-      splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: (i * 1000) / signalsData[signalId].rate, y: point })));
+      splineSeries1.add(signalData.data.map((point, i) => ({ x: (i * 1000) / signalData.rate, y: point })));
       const min = splineSeries1.getYMin() - 30;
       const max = splineSeries1.getYMax() + 50;
       const diff = max - min;
@@ -325,7 +327,7 @@ function Charts() {
           // Custom fitting for some additional margins
           //axisY.setInterval(y, figureHeight * 0.5);
         };
-        const t = i;
+        const t = index;
         let customYRange = figureHeight + figureGap * 1.6;
         const addCategory = (y) => {
           const addSpan = (i, min, max, index) => {
@@ -385,16 +387,16 @@ function Charts() {
           thickness: 1,
         });
 
-        let index = 0;
+        let index1 = 0;
         //const start = props.data.data_pulse[0] ? (props.data.data_pulse[0].x.getTime() - dateOriginTime) / 1000 : 0;
         events[signalId].forEach((event, i) => {
           const start = (new Date(event.start).getTime() - dateOriginTime) / 1;
           const end = (new Date(event.end).getTime() - dateOriginTime) / 1;
-          categories[i].addSpan(i, start, end, index).setFillStyle(fillStyles[i]).setStrokeStyle(strokeStyle);
+          categories[i].addSpan(i, start, end, index1).setFillStyle(fillStyles[i]).setStrokeStyle(strokeStyle);
         });
       }
 
-      i++;
+      index++;
     });
     setLoading(false);
     const l = xAxisList.length;
