@@ -78,13 +78,14 @@ function Charts() {
             return response.json();
           })
           .then((result) => {
-            data[i] = {
+            data.push({
+              i,
               signalId: signal.SignalId,
               data: result.Points,
               type: signal.Type + " " + signal.Specification,
               rate: result.SampleRate,
-            };
-            if (data.length === l) setSignalsData(data);
+            });
+            if (data.length === l) setSignalsData(data.sort((a, b) => a.i - b.i));
           });
       });
     },
@@ -121,7 +122,6 @@ function Charts() {
 
   const drawCharts = useCallback(() => {
     if (!interval || !signalsData) return;
-    console.log(signalsData);
     const dateOrigin = new Date(interval.start);
     const dateOriginTime = dateOrigin.getTime();
     const chartNumber = signalsData.length;
@@ -284,7 +284,6 @@ function Charts() {
         })
         .setCursorResultTableFormatter((tableBuilder, series, x, y) => {
           const d = new Date(x + dateOrigin.getTime());
-          console.log(x);
           return tableBuilder
             .addRow(signalData.type)
             .addRow("Time : " + d.toUTCString())
