@@ -36,6 +36,16 @@ const seriesStrokeStyles = axisYStrokeStyles;
 const fittingRectangleStrokeStyle = new SolidLine({ fillStyle: new SolidFill({ color: ColorRGBA(255, 255, 255, 100) }), thickness: 2 });
 const zoomingRectangleFillStyle = new SolidFill({ color: colors[2].setA(100) });
 
+const eventY = {
+  Recovery: 80,
+  Desaturation: 60,
+  Reciprocation: 100,
+  OximetryReciprocation: 150,
+  OximetryCycling: 30,
+  CandidateEvent: 120,
+  Tachycardia: 130,
+};
+
 function Charts() {
   const [studyData, setStudyData] = useState(null);
   const [studySignals, setStudySignals] = useState([]);
@@ -68,7 +78,11 @@ function Charts() {
             return response.json();
           })
           .then((result) => {
-            data[signal.SignalId] = { data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []), type: signal.Type + " " + signal.Specification };
+            data[signal.SignalId] = {
+              data: result.reduce((accumulator, currentValue) => accumulator.concat(currentValue.Points), []),
+              type: signal.Type + " " + signal.Specification,
+              rate: result[0].SampleRate,
+            };
             if (Object.keys(data).length === l) setSignalsData(data);
           });
       });
@@ -91,7 +105,7 @@ function Charts() {
                   start: currentValue.StartTime,
                   end: currentValue.EndTime,
                   type: currentValue.Type,
-                  y: parseFloat(currentValue.CustomCharacteristics["Highest Value"] || currentValue.CustomCharacteristics["Top Value"]),
+                  y: eventY[currentValue.Type] || parseFloat(currentValue.CustomCharacteristics["Highest Value"] || currentValue.CustomCharacteristics["Top Value"]),
                 }),
               []
             );
@@ -232,7 +246,9 @@ function Charts() {
           // The Zoom Band Chart will imitate all Series present in that Axis.
           axis: chart.getDefaultAxisX(),
         });
-        zoomBandChart.setPadding(20);
+        zoomBandChart.setPadding({
+          left: -20,
+        });
         zoomBandChart.band.setStrokeStyle(
           new SolidLine({
             thickness: 2,
@@ -248,7 +264,7 @@ function Charts() {
         zoomBandChart.band.setValueStart(0);
         zoomBandChart.band.setValueEnd(signalsData[signalId].data.length * 10);
       }
-      splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: i * 100, y: point })));
+      splineSeries1.add(signalsData[signalId].data.map((point, i) => ({ x: (i * 1000) / signalsData[signalId].rate, y: point })));
       const min = splineSeries1.getYMin() - 30;
       const max = splineSeries1.getYMax() + 50;
       const diff = max - min;
@@ -260,7 +276,7 @@ function Charts() {
 
         let y = 0;
 
-        const figureHeight = 15;
+        const figureHeight = 12;
         const figureThickness = 5;
         const figureGap = figureThickness * 0.5;
         const fitAxes = () => {
