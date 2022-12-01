@@ -128,7 +128,7 @@ function Charts() {
       theme: Themes.lightNew,
       numberOfColumns: 1,
       container: "chartContainer",
-      numberOfRows: 3 * chartNumber + 5,
+      numberOfRows: 3 * chartNumber + 8,
       height: 1100,
       margin: { top: 50 },
     });
@@ -136,12 +136,36 @@ function Charts() {
     const xAxisList = [];
     const chartList = [];
     let i = 0;
+    const column = dashboard
+      .createUIPanel({
+        columnIndex: 0,
+        rowIndex: 0,
+        columnSpan: 1,
+        rowSpan: 1,
+      })
+      .addUIElement(UILayoutBuilders.Row)
+      .setBackground((background) => background.setFillStyle(emptyFill).setStrokeStyle(emptyLine))
+      .setPosition({ x: 20, y: 40 });
+    const firstRow = column.addElement(UILayoutBuilders.Row);
+    firstRow.addElement(
+      UIElementBuilders.TextBox
+        // Modify TextBox builder to style the text field
+        .addStyler((textBox) => textBox.setTextFont((fontSettings) => fontSettings.setSize(18)).setText("Patient: " + studyData.PatientName))
+    );
+    column.addElement(
+      UIElementBuilders.TextBox
+        // Modify TextBox builder to style the text field
+        .addStyler((textBox) =>
+          textBox.setTextFont((fontSettings) => fontSettings.setSize(18)).setText("Study: " + studyData.SleepStudyId + " (" + new Date(studyData.SleepStudyId).toDateString() + ")")
+        )
+    );
+    column.addGap();
     Object.keys(signalsData).forEach((signalId) => {
       const chart = dashboard
         .createChartXY({
           columnIndex: 0,
           columnSpan: 1,
-          rowIndex: i * 3,
+          rowIndex: i * 3 + 1,
           rowSpan: 4 + (i === chartNumber - 1 ? 1 : 0),
           theme: Themes.lightNew,
           defaultAxisX: {
@@ -152,8 +176,8 @@ function Charts() {
         .setPadding({
           right: 50,
           left: 0,
-          top: 30,
-          bottom: 20,
+          top: i === 0 ? 20 : 0,
+          bottom: 50,
           //bottom: i === 0 ? 0 : -30,
         })
 
@@ -172,11 +196,23 @@ function Charts() {
           .setNibOverlayStyle(axisXStyleHighlight)
           // Set the X Axis to use DateTime TickStrategy
           .setScrollStrategy(undefined)
+          .setThickness(10)
           .setTickStrategy(
             // Use DateTime TickStrategy for this Axis
             AxisTickStrategies.DateTime,
             // Modify the DateOrigin of the TickStrategy
             (tickStrategy) => tickStrategy.setDateOrigin(dateOrigin)
+          )
+          .setTickStrategy(AxisTickStrategies.Numeric, (tickStrategy) =>
+            tickStrategy
+              .setMinorFormattingFunction((tickPosition) => {
+                const d = new Date(tickPosition + dateOrigin.getTime());
+                return d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds();
+              })
+              .setMajorFormattingFunction((tickPosition) => {
+                const d = new Date(tickPosition + dateOrigin.getTime());
+                return d.getHours() + ":" + d.getMinutes();
+              })
           );
       } else {
         xAxisList[i] = chart
@@ -224,6 +260,10 @@ function Charts() {
           // Modify Minor Tick Style by using a mutator.
         )
         .setScrollStrategy(AxisScrollStrategies.regressive);
+      if (i === 0) {
+        const firstRow = column.addElement(UILayoutBuilders.Row);
+        firstRow.addGap();
+      }
       const customTick = axisY
         .addCustomTick()
         .setTickLength(70)
@@ -236,16 +276,18 @@ function Charts() {
 
       if (i === 0) {
         axisY.setInterval(-10, 200);
-        const zoomBandChart = dashboard.createZoomBandChart({
-          columnIndex: 0,
-          theme: Themes.glacier,
-          columnSpan: 1,
-          rowIndex: Object.keys(signalsData).length * 3,
-          rowSpan: 4,
-          // Specify the Axis for the Zoom Band Chart to follow.
-          // The Zoom Band Chart will imitate all Series present in that Axis.
-          axis: chart.getDefaultAxisX(),
-        });
+        const zoomBandChart = dashboard
+          .createZoomBandChart({
+            columnIndex: 0,
+            theme: Themes.glacier,
+            columnSpan: 1,
+            rowIndex: Object.keys(signalsData).length * 3 + 3,
+            rowSpan: 2,
+            // Specify the Axis for the Zoom Band Chart to follow.
+            // The Zoom Band Chart will imitate all Series present in that Axis.
+            axis: chart.getDefaultAxisX(),
+          })
+          .setTitle("");
         zoomBandChart.setPadding({
           left: -20,
         });
