@@ -64,7 +64,7 @@ function Charts() {
   const loadStudySignals = () => {
     fetch(`https://legacy-sleepscreen-v3.azurewebsites.net/sleepstudy/api/sleepstudysignals?sleepstudyid=${studyId}`)
       .then((response) => response.json())
-      .then((result) => setStudySignals([result[5], result[0], result[6], result[1], result[8]]));
+      .then((result) => setStudySignals([result[5], result[0], result[6], result[2], result[8]]));
   };
 
   const loadSignalsData = useCallback(
@@ -157,7 +157,7 @@ function Charts() {
       UIElementBuilders.TextBox
         // Modify TextBox builder to style the text field
         .addStyler((textBox) =>
-          textBox.setTextFont((fontSettings) => fontSettings.setSize(18)).setText("Study: " + studyData.SleepStudyId + " (" + new Date(studyData.SleepStudyId).toDateString() + ")")
+          textBox.setTextFont((fontSettings) => fontSettings.setSize(18)).setText("Study: " + studyData.SleepStudyId + " (" + new Date(studyData.SleepStudyDate).toDateString() + ")")
         )
     );
     column.addGap();
@@ -281,6 +281,12 @@ function Charts() {
         .addLineSeries({
           xAxis: xAxisList[index],
           yAxis: axisY,
+          dataPattern: {
+            // pattern: 'ProgressiveX' => Each consecutive data point has increased X coordinate.
+            pattern: "ProgressiveX",
+            // regularProgressiveStep: true => The X step between each consecutive data point is regular (for example, always `1.0`).
+            regularProgressiveStep: true,
+          },
         })
         .setCursorResultTableFormatter((tableBuilder, series, x, y) => {
           const d = new Date(x + dateOrigin.getTime());
