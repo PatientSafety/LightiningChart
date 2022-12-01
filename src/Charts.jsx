@@ -43,7 +43,7 @@ const eventY = {
   OximetryReciprocation: 120,
   OximetryCycling: 30,
   CandidateEvent: 90,
-  Tachycardia: 110,
+  Tachycardia: 170,
 };
 
 function Charts() {
@@ -178,7 +178,7 @@ function Charts() {
         .setPadding({
           right: 50,
           left: 0,
-          top: index === 0 ? 20 : 0,
+          top: index < 2 ? 20 : 0,
           bottom: 50,
           //bottom: i === 0 ? 0 : -30,
         })
@@ -221,6 +221,7 @@ function Charts() {
           .getDefaultAxisX()
 
           .setOverlayStyle(axisXStyleHighlight)
+          .setMouseInteractions(false)
           .setNibOverlayStyle(axisXStyleHighlight)
           // Set the X Axis to use DateTime TickStrategy
           .setScrollStrategy(undefined)
@@ -266,15 +267,30 @@ function Charts() {
         const firstRow = column.addElement(UILayoutBuilders.Row);
         firstRow.addGap();
       }
-      const customTick = axisY
-        .addCustomTick()
-        .setTickLength(70)
-        .setTextFormatter((position, customTick) => "");
+
+      // xAxisList[index]
+      //   .addCustomTick()
+      //   .setTickLength(30)
+      //   .setTextFormatter((position, customTick) => new Date(position + dateOrigin.getTime()).toUTCString());
+
+      // const customTick = axisY
+      //   .addCustomTick()
+      //   .setTickLength(70)
+      //   .setTextFormatter((position, customTick) => "");
       // Modify the TickStrategy to remove gridLines from this Y Axis.
-      const splineSeries1 = chart.addLineSeries({
-        xAxis: xAxisList[index],
-        yAxis: axisY,
-      });
+      const splineSeries1 = chart
+        .addLineSeries({
+          xAxis: xAxisList[index],
+          yAxis: axisY,
+        })
+        .setCursorResultTableFormatter((tableBuilder, series, x, y) => {
+          const d = new Date(x + dateOrigin.getTime());
+          console.log(x);
+          return tableBuilder
+            .addRow(signalData.type)
+            .addRow("Time : " + d.toUTCString())
+            .addRow("Value : " + y.toFixed(2));
+        });
 
       if (index === 0) {
         axisY.setInterval(-10, 200);
